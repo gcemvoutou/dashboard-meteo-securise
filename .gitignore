@@ -1,0 +1,22 @@
+# Secrets et configuration locale
+.env
+.streamlit/secrets.toml
+
+# Données locales (cache, comptes, journaux)
+data/
+*.db
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
