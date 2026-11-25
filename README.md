@@ -33,6 +33,22 @@ Un constat important : Bandit n'a rien trouvé sur le code fourni, alors qu'il n
 | En-têtes de sécurité HTTP manquants | OWASP ZAP | Résiduelle : reverse proxy nginx (documenté) |
 | Actions du pipeline non épinglées | SonarQube | Épinglage par empreinte SHA du commit |
 
+### Comment j'ai repéré les failles
+
+La plupart des failles les plus graves n'ont pas été trouvées par les outils, mais par une revue manuelle du code, en me posant à chaque fois une question simple.
+
+**Que se passe-t-il quand quelque chose échoue ?** J'ai suivi chaque cas d'erreur. Quand l'API ne répond pas, le code d'origine basculait en silence sur des données générées au hasard, sans prévenir : l'utilisateur pouvait prendre une fausse alerte pollution pour une vraie (V04). Quand l'API renvoyait une réponse incomplète, rien ne la vérifiait et l'application plantait (V07). Et en cas d'erreur, Streamlit affichait par défaut toute la trace technique — chemins et code source — directement au visiteur (V02). J'ai ajouté une validation des réponses, un repli signalé par un bandeau, et un message d'erreur générique côté utilisateur.
+
+**Les données affichées sont-elles les bonnes ?** En lisant la ligne `latest = df.iloc[-1]`, j'ai cherché ce qu'était réellement cette « dernière ligne ». Les données contiennent l'historique et les prévisions : la dernière ligne est donc une prévision à plusieurs jours, pas la valeur actuelle (V05). J'ai corrigé en prenant la vraie valeur du moment et en séparant l'historique des prévisions. Le test l'a confirmé : le code d'origine affichait une prévision à la place de la météo réelle, puis plantait.
+
+**Peut-on faire confiance aux données stockées ?** Le cache SQLite était relu et affiché tel quel. Quelqu'un qui modifierait le fichier verrait ses fausses données s'afficher (V06). J'ai ajouté une validation du contenu du cache à la relecture.
+
+**Comment l'application est-elle configurée et installée ?** Il n'y avait pas de fichier `requirements.txt` : les versions des bibliothèques n'étaient pas maîtrisées (V03). La télémétrie de Streamlit était active par défaut (V12), et l'application écoutait sur toutes les interfaces réseau, donc accessible depuis tout le réseau local (V15). J'ai épinglé les versions, désactivé la télémétrie et limité l'écoute à la machine locale.
+
+**Les ressources sont-elles bien libérées ?** Cette faiblesse est venue des tests : pytest signalait que les connexions à la base de données n'étaient jamais fermées, ce qui épuise les ressources à la longue (V09). J'ai encadré chaque connexion pour qu'elle se ferme systématiquement.
+
+Cette démarche — se poser les bonnes questions et suivre le code ligne par ligne — a permis de trouver les failles de conception qu'aucun outil automatique n'a détectées.
+
 La liste complète des 18 vulnérabilités, avec leur classement OWASP et leur test, est dans [`docs/analyse-securite.md`](docs/analyse-securite.md).
 
 ## Fonctionnalités
