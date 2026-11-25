@@ -1,0 +1,35 @@
+# Configuration durcie de Streamlit (voir docs/analyse-securite.md)
+
+[server]
+headless = true
+address = "127.0.0.1"
+# Protection CSRF et contrôle d'origine (valeurs par défaut, rendues explicites)
+enableXsrfProtection = true
+enableCORS = true
+xsrfCookieSameSite = "strict"
+# Hôtes autorisés (protection contre le DNS rebinding) : ajouter le nom de domaine en production
+allowedHosts = ["localhost", "127.0.0.1"]
+# API « agent » expérimentale : désactivée explicitement (surface d'attaque inutile)
+enableAgentApi = false
+# Pas de rechargement à chaud en production
+runOnSave = false
+fileWatcherType = "none"
+# L'application n'accepte aucun fichier : taille d'upload minimale
+maxUploadSize = 1
+maxMessageSize = 50
+
+[client]
+# Ne jamais afficher de trace Python (chemins, code source) dans le navigateur
+showErrorDetails = "none"
+# Masquer les menus développeur
+toolbarMode = "viewer"
+
+[browser]
+# Pas de télémétrie envoyée à Streamlit
+gatherUsageStats = false
+
+[global]
+developmentMode = false
+
+[logger]
+level = "info"
