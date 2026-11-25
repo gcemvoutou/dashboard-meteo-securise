@@ -118,6 +118,8 @@ ValueError: cannot convert float NaN to integer
 
 Première analyse réalisée en mode *Automatic Analysis* (sans couverture) ; cette méthode a ensuite été désactivée au profit de l'analyse par le pipeline, qui importe la couverture des tests (`reports/tests/coverage.xml`).
 
+**État final (analyse CI du 25/11/2026)** : Quality Gate *Passed*, 0 problème ouvert, notes A en sécurité, fiabilité et maintenabilité, 0 Security Hotspot, duplication 0,0 %, couverture 91,5 % (lignes et branches ; pytest-cov mesure 94 % en lignes seules), 11 problèmes de sécurité corrigés.
+
 **Leçon** : Bandit et Semgrep n'analysent que le code Python ; SonarQube a aussi examiné la définition du pipeline et y a trouvé les faiblesses les plus graves du dépôt. La sécurité d'un projet inclut celle de sa chaîne de construction.
 
 ## 6. Risques résiduels et recommandations
