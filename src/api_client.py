@@ -228,8 +228,10 @@ class WeatherAPIClient:
     @staticmethod
     def _generate_mock_data(lat: float, lon: float) -> Dict[str, Any]:
         """Génère un jeu de données simulé au même format que les réponses Open-Meteo."""
-        rng = np.random.default_rng()
         now = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
+        # Graine explicite (coordonnées + heure) : données simulées reproductibles pour une ville et une heure.
+        seed = int(abs(lat) * 1000) * 1_000_000 + int(abs(lon) * 1000) + int(now.timestamp() // 3600)
+        rng = np.random.default_rng(seed)
         start = now - datetime.timedelta(days=config.PAST_DAYS)
         hours = 24 * (config.PAST_DAYS + config.FORECAST_DAYS)
         times: List[str] = [

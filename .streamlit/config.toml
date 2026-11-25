@@ -2,6 +2,8 @@
 
 [server]
 headless = true
+# N'écouter que sur la boucle locale : l'application n'est pas joignable depuis le réseau (V15).
+# En production, le reverse proxy (nginx) est seul exposé.
 address = "127.0.0.1"
 # Protection CSRF et contrôle d'origine (valeurs par défaut, rendues explicites)
 enableXsrfProtection = true
