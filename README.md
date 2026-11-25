@@ -4,6 +4,37 @@ Application Streamlit de suivi météo et qualité de l'air pour 5 villes (Paris
 
 > Réalisé par : Clara EMVOUTOU (travail individuel)
 
+## Démarche de sécurisation
+
+J'ai traité le sujet en trois temps : **sécuriser** l'application, **l'analyser** avec des outils, puis **automatiser** ces analyses.
+
+**1. Application et authentification.** J'ai d'abord réorganisé le code fourni (un seul gros fichier) en modules séparés : récupération des données, logique métier, affichage. Puis j'ai ajouté une page de connexion obligatoire, car le code d'origine laissait le dashboard accessible à tout le monde.
+
+**2. Analyse de sécurité.** J'ai utilisé trois familles d'outils, qui regardent l'application sous trois angles complémentaires :
+- **SAST** (Bandit, Semgrep, SonarQube) : lit le code **sans l'exécuter**, pour repérer les instructions dangereuses ;
+- **SCA** (pip-audit) : vérifie que les **bibliothèques** utilisées n'ont pas de vulnérabilité connue ;
+- **DAST** (OWASP ZAP) : **attaque l'application en fonctionnement**, comme le ferait un pirate.
+
+Un constat important : Bandit n'a rien trouvé sur le code fourni, alors qu'il n'avait **aucune authentification**. Un outil SAST repère des motifs dangereux dans le code, pas une fonctionnalité qui **manque**. Les failles de conception se trouvent par une **revue manuelle**, c'est pourquoi j'ai combiné les outils avec une lecture du code.
+
+**3. Pipeline CI/CD (DevSecOps).** J'ai intégré tous ces outils dans un pipeline GitHub Actions : à chaque envoi de code, les tests et les analyses de sécurité se relancent automatiquement. SonarQube a alors trouvé des faiblesses **dans le pipeline lui-même** (outils désignés par une étiquette modifiable, dépendances non verrouillées), que j'ai corrigées.
+
+### Exemples de failles identifiées et corrigées
+
+| Faille | Détectée par | Correction |
+|---|---|---|
+| Aucune authentification | Revue manuelle | Page de connexion obligatoire |
+| Mots de passe stockables en clair | Conception | Hachage **bcrypt** (sel aléatoire, à sens unique) |
+| Force brute possible sur le login | Conception | Verrouillage après 5 échecs pendant 15 min |
+| Énumération des comptes | Conception | Même message d'erreur que le compte existe ou non |
+| Traces techniques affichées au visiteur | Revue de la configuration | Message générique + trace gardée côté serveur |
+| Fausses données affichées comme réelles | Revue manuelle | Bandeau signalant le mode simulé |
+| Dépendances non épinglées | pip-audit | Versions fixées dans `requirements.txt` |
+| En-têtes de sécurité HTTP manquants | OWASP ZAP | Résiduelle : reverse proxy nginx (documenté) |
+| Actions du pipeline non épinglées | SonarQube | Épinglage par empreinte SHA du commit |
+
+La liste complète des 18 vulnérabilités, avec leur classement OWASP et leur test, est dans [`docs/analyse-securite.md`](docs/analyse-securite.md).
+
 ## Fonctionnalités
 
 - **Données** (API Open-Meteo, sans clé) : température actuelle, ressentie, min/max du jour, humidité, pression, vent (vitesse et direction), couverture nuageuse, précipitations ; AQI (US), PM2.5, PM10, NO2, O3, CO, SO2. Historique 7 jours + prévisions 2 jours.
