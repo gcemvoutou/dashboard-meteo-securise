@@ -6,7 +6,7 @@ Prérequis : Python 3.12+, Docker Desktop (pour ZAP et SonarQube), application i
 
 1. Activer l'environnement virtuel.
 2. Lancer `streamlit run app.py`.
-3. Vérifier que `http://localhost:8501/_stcore/health` affiche `ok`.
+3. Vérifier que `http://127.0.0.1:8501/_stcore/health` affiche `ok`.
 
 ## 2. Analyse statique et dépendances (sans Docker)
 
@@ -15,10 +15,11 @@ Prérequis : Python 3.12+, Docker Desktop (pour ZAP et SonarQube), application i
    ```
    bandit -c pyproject.toml -r src app.py -f html -o reports/apres/bandit.html
    ```
-3. Lancer pip-audit :
+3. Lancer pip-audit et enregistrer le résultat (depuis `cmd`, venv activé avec `.venv\Scripts\activate.bat`) :
    ```
-   pip-audit -r requirements.txt -f markdown -o reports/apres/pip-audit.md
+   pip-audit -r requirements.txt > reports\apres\pip-audit.txt 2>&1
    ```
+   Le message est écrit sur la sortie d'erreur : `2>&1` est nécessaire pour qu'il arrive dans le fichier.
 4. Pour comparer avec le code d'origine, relancer Bandit sur le dossier `original` :
    ```
    bandit -r original -f html -o reports/avant/bandit.html
@@ -27,6 +28,18 @@ Prérequis : Python 3.12+, Docker Desktop (pour ZAP et SonarQube), application i
 Le résultat attendu est « No issues identified » et « No known vulnerabilities found ».
 
 ## 3. OWASP ZAP (DAST)
+
+Méthode utilisée pour les rapports du dépôt : ZAP Desktop (installé avec `winget install -e --id ZAP.ZAP`), sans Docker.
+
+1. Lancer le code d'origine sur un second port pour la comparaison :
+   ```
+   streamlit run original\dashboard_meteo_qualite_air_boilerplate.py --server.port 8502
+   ```
+2. Dans ZAP, cliquer sur **Automated Scan**, saisir `http://localhost:8501`, laisser l'araignée traditionnelle cochée, choisir **Client Spider** avec **Firefox Headless**, puis cliquer sur **Attaquer**.
+3. Cliquer sur **Rapport → Générer un rapport**, modèle **Traditional HTML Report**, nom `zap-local`, dossier `reports\apres`.
+4. Cliquer sur **Fichier → Nouvelle session**, puis refaire les étapes 2 et 3 avec `http://localhost:8502` et le dossier `reports\avant`.
+
+Variante avec Docker (scan baseline en ligne de commande) :
 
 1. Laisser l'application tourner (étape 1).
 2. Depuis la racine du projet, lancer le scan baseline :

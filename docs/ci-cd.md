@@ -24,17 +24,30 @@ push / PR
 Bonnes pratiques appliquées :
 - jeton `GITHUB_TOKEN` en lecture seule (`permissions: contents: read`) ;
 - aucun secret dans le code : le jeton SonarQube est un secret GitHub ;
-- versions des outils épinglées ;
+- actions GitHub épinglées par empreinte SHA du commit (version en commentaire) ;
+- dépendances installées depuis des fichiers verrouillés avec empreintes SHA-256 (`--require-hashes`), uniquement en paquets précompilés (`--only-binary :all:`) ;
 - rapports conservés en artefacts même en cas d'échec (`if: always()`).
+
+## Mettre à jour les dépendances verrouillées
+
+Les fichiers `requirements.lock` (application) et `requirements-ci.lock` (application + outils de test et d'analyse) sont générés à partir de `requirements.txt` et `requirements-ci.txt` :
+
+```
+pip install uv
+uv pip compile requirements.txt --universal --python-version 3.12 --generate-hashes --only-binary :all: -o requirements.lock
+uv pip compile requirements-ci.txt --universal --python-version 3.12 --generate-hashes --only-binary :all: -o requirements-ci.lock
+```
+
+Après chaque modification d'un fichier `requirements*.txt`, régénérer les deux fichiers `.lock` et les committer.
 
 ## Activer SonarQube Cloud
 
 1. Se connecter sur https://sonarcloud.io avec le compte GitHub.
 2. Cliquer sur **+** → **Analyze new project**, puis sélectionner le dépôt.
 3. Choisir **With GitHub Actions** comme méthode d'analyse.
-4. Désactiver l'**Automatic Analysis** dans **Administration → Analysis Method** (sinon l'analyse CI est refusée).
+4. Désactiver l'**Automatic Analysis** dans **Administration → Analysis Method** (sinon l'analyse CI est refusée, et l'analyse automatique n'importe pas la couverture des tests).
 5. Copier le jeton généré, puis dans GitHub aller dans **Settings → Secrets and variables → Actions → New repository secret** : nom `SONAR_TOKEN`, valeur = le jeton.
-6. Remplacer `REMPLACER_PAR_ORGANISATION` et `REMPLACER_PAR_CLE_PROJET` dans `sonar-project.properties` par les valeurs affichées sur SonarCloud.
+6. Renseigner `sonar.organization` et `sonar.projectKey` dans `sonar-project.properties` (ici `gcemvoutou` et `gcemvoutou_dashboard-meteo-securise` ; la clé apparaît dans l'adresse du projet, après `?id=`).
 7. Pousser un commit : le job `sonarqube` doit passer au vert et le tableau de bord SonarCloud se remplir.
 
 Sans le secret `SONAR_TOKEN`, le job affiche un avertissement et ne bloque pas le pipeline.

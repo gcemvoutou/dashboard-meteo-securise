@@ -30,6 +30,7 @@ Application Streamlit de suivi météo et qualité de l'air pour 5 villes (Paris
 ├── .streamlit/config.toml    # Configuration Streamlit durcie
 ├── .github/workflows/ci.yml  # Pipeline CI/CD
 ├── sonar-project.properties  # Configuration SonarQube
+├── requirements*.txt / *.lock # Dépendances (épinglées / verrouillées avec empreintes)
 ├── reports/                  # Rapports de tests et d'analyses (avant / après)
 ├── docs/                     # Analyse de sécurité, CI/CD, procédure locale
 └── original/                 # Code fourni, conservé pour la comparaison avant/après
@@ -56,7 +57,7 @@ Séparation stricte : récupération des données (`api_client`) / logique méti
    ```
    streamlit run app.py
    ```
-5. Ouvrir http://localhost:8501 et se connecter.
+5. Ouvrir http://127.0.0.1:8501 (ou http://localhost:8501) et se connecter. L'application n'écoute que sur le PC local.
 
 Autres commandes : `python -m src.manage_users list`, `unlock <identifiant>` (après verrouillage), `delete <identifiant>`.
 
@@ -75,11 +76,13 @@ python -m pytest --cov=src
 - Procédure d'analyse en local (Bandit, pip-audit, ZAP, SonarQube) : [`docs/guide-analyse-locale.md`](docs/guide-analyse-locale.md)
 - Pipeline CI/CD et activation de SonarQube : [`docs/ci-cd.md`](docs/ci-cd.md)
 
-Résumé : 14 vulnérabilités ou faiblesses identifiées dans le code fourni (absence d'authentification, traces techniques affichées, dépendances non épinglées, fausses données présentées comme réelles, etc.) ; 13 corrigées, 1 résiduelle (en-têtes HTTP de sécurité, à traiter par un reverse proxy).
+Résumé : 18 vulnérabilités ou faiblesses identifiées — 15 dans le code fourni (absence d'authentification, traces techniques affichées, dépendances non épinglées, fausses données présentées comme réelles, application exposée sur le réseau, etc.) et 3 dans le pipeline CI/CD, détectées par SonarQube (actions non épinglées par SHA, dépendances non verrouillées). 17 corrigées, 1 résiduelle (en-têtes HTTP de sécurité, confirmée par OWASP ZAP, à traiter par un reverse proxy).
 
 ## CI/CD
 
-Chaque push lance : tests pytest → Bandit → Semgrep → pip-audit → SonarQube Cloud → scan OWASP ZAP de l'application démarrée. Les rapports sont disponibles en artefacts dans l'onglet **Actions**.
+Chaque push lance : tests pytest → Bandit → Semgrep → pip-audit → SonarQube Cloud → scan OWASP ZAP de l'application démarrée. Les rapports sont disponibles en artefacts dans l'onglet **Actions**, et l'analyse SonarQube sur https://sonarcloud.io/project/overview?id=gcemvoutou_dashboard-meteo-securise.
+
+Le pipeline est lui-même durci : actions épinglées par empreinte SHA, dépendances installées depuis des fichiers verrouillés (`requirements.lock`, `requirements-ci.lock`) avec vérification des empreintes.
 
 ## Variables d'environnement (`.env`)
 
