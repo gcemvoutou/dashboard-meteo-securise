@@ -1,4 +1,4 @@
-# 🌤️ Dashboard Météo & Qualité de l'Air — version sécurisée
+# 🌤️ Dashboard Météo & Qualité de l'Air version sécurisée
 
 Application Streamlit de suivi météo et qualité de l'air pour 5 villes (Paris, Lyon, Marseille, Londres, Madrid), réalisée selon le cahier des charges fourni (fonctionnalités obligatoires uniquement), complétée par une **authentification**, une **analyse de sécurité** et un **pipeline CI/CD DevSecOps**.
 
@@ -37,7 +37,7 @@ Un constat important : Bandit n'a rien trouvé sur le code fourni, alors qu'il n
 
 La plupart des failles les plus graves n'ont pas été trouvées par les outils, mais par une revue manuelle du code, en me posant à chaque fois une question simple.
 
-**Que se passe-t-il quand quelque chose échoue ?** J'ai suivi chaque cas d'erreur. Quand l'API ne répond pas, le code d'origine basculait en silence sur des données générées au hasard, sans prévenir : l'utilisateur pouvait prendre une fausse alerte pollution pour une vraie (V04). Quand l'API renvoyait une réponse incomplète, rien ne la vérifiait et l'application plantait (V07). Et en cas d'erreur, Streamlit affichait par défaut toute la trace technique — chemins et code source — directement au visiteur (V02). J'ai ajouté une validation des réponses, un repli signalé par un bandeau, et un message d'erreur générique côté utilisateur.
+**Que se passe-t-il quand quelque chose échoue ?** J'ai suivi chaque cas d'erreur. Quand l'API ne répond pas, le code d'origine basculait en silence sur des données générées au hasard, sans prévenir : l'utilisateur pouvait prendre une fausse alerte pollution pour une vraie (V04). Quand l'API renvoyait une réponse incomplète, rien ne la vérifiait et l'application plantait (V07). Et en cas d'erreur, Streamlit affichait par défaut toute la trace technique  chemins et code source  directement au visiteur (V02). J'ai ajouté une validation des réponses, un repli signalé par un bandeau, et un message d'erreur générique côté utilisateur.
 
 **Les données affichées sont-elles les bonnes ?** En lisant la ligne `latest = df.iloc[-1]`, j'ai cherché ce qu'était réellement cette « dernière ligne ». Les données contiennent l'historique et les prévisions : la dernière ligne est donc une prévision à plusieurs jours, pas la valeur actuelle (V05). J'ai corrigé en prenant la vraie valeur du moment et en séparant l'historique des prévisions. Le test l'a confirmé : le code d'origine affichait une prévision à la place de la météo réelle, puis plantait.
 
@@ -47,7 +47,7 @@ La plupart des failles les plus graves n'ont pas été trouvées par les outils,
 
 **Les ressources sont-elles bien libérées ?** Cette faiblesse est venue des tests : pytest signalait que les connexions à la base de données n'étaient jamais fermées, ce qui épuise les ressources à la longue (V09). J'ai encadré chaque connexion pour qu'elle se ferme systématiquement.
 
-Cette démarche — se poser les bonnes questions et suivre le code ligne par ligne — a permis de trouver les failles de conception qu'aucun outil automatique n'a détectées.
+Cette démarche se poser les bonnes questions et suivre le code ligne par ligne a permis de trouver les failles de conception qu'aucun outil automatique n'a détectées.
 
 La liste complète des 18 vulnérabilités, avec leur classement OWASP et leur test, est dans [`docs/analyse-securite.md`](docs/analyse-securite.md).
 
@@ -123,7 +123,7 @@ python -m pytest --cov=src
 - Procédure d'analyse en local (Bandit, pip-audit, ZAP, SonarQube) : [`docs/guide-analyse-locale.md`](docs/guide-analyse-locale.md)
 - Pipeline CI/CD et activation de SonarQube : [`docs/ci-cd.md`](docs/ci-cd.md)
 
-Résumé : 18 vulnérabilités ou faiblesses identifiées — 15 dans le code fourni (absence d'authentification, traces techniques affichées, dépendances non épinglées, fausses données présentées comme réelles, application exposée sur le réseau, etc.) et 3 dans le pipeline CI/CD, détectées par SonarQube (actions non épinglées par SHA, dépendances non verrouillées). 17 corrigées, 1 résiduelle (en-têtes HTTP de sécurité, confirmée par OWASP ZAP, à traiter par un reverse proxy).
+Résumé : 18 vulnérabilités ou faiblesses identifiées 15 dans le code fourni (absence d'authentification, traces techniques affichées, dépendances non épinglées, fausses données présentées comme réelles, application exposée sur le réseau, etc.) et 3 dans le pipeline CI/CD, détectées par SonarQube (actions non épinglées par SHA, dépendances non verrouillées). 17 corrigées, 1 résiduelle (en-têtes HTTP de sécurité, confirmée par OWASP ZAP, à traiter par un reverse proxy).
 
 ## CI/CD
 
