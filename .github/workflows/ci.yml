@@ -1,0 +1,148 @@
+# Pipeline CI/CD DevSecOps — Dashboard Météo & Qualité de l'Air
+# Étapes : tests unitaires → SAST (Bandit, Semgrep) → SCA (pip-audit) → SonarQube → DAST (OWASP ZAP)
+name: CI-DevSecOps
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Principe du moindre privilège pour le jeton GITHUB_TOKEN
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  tests:
+    name: Tests unitaires (pytest + couverture)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Lancer pytest
+        run: |
+          mkdir -p reports/tests
+          python -m pytest --cov=src --cov-report=xml:reports/tests/coverage.xml \
+            --cov-report=term --junitxml=reports/tests/junit.xml
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: rapport-tests
+          path: reports/tests/
+
+  sast-bandit:
+    name: SAST — Bandit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install "bandit[toml]==1.9.4"
+      - name: Analyse Bandit (échec si gravité >= moyenne)
+        run: |
+          mkdir -p reports/bandit
+          bandit -c pyproject.toml -r src app.py -f html -o reports/bandit/bandit.html --exit-zero
+          bandit -c pyproject.toml -r src app.py -f txt -o reports/bandit/bandit.txt --exit-zero
+          bandit -c pyproject.toml -r src app.py -ll
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: rapport-bandit
+          path: reports/bandit/
+
+  sast-semgrep:
+    name: SAST — Semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install semgrep
+      - name: Analyse Semgrep (règles Python + détection de secrets)
+        run: |
+          mkdir -p reports/semgrep
+          semgrep scan --config p/python --config p/secrets --metrics=off \
+            --exclude original --json --output reports/semgrep/semgrep.json --error src app.py
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: rapport-semgrep
+          path: reports/semgrep/
+
+  sca-pip-audit:
+    name: SCA — pip-audit (dépendances)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install pip-audit==2.10.1
+      - name: Audit des dépendances (échec si CVE connue)
+        run: |
+          mkdir -p reports/pip-audit
+          pip-audit -r requirements.txt --progress-spinner off -f markdown -o reports/pip-audit/pip-audit.md || true
+          pip-audit -r requirements.txt --progress-spinner off
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: rapport-pip-audit
+          path: reports/pip-audit/
+
+  sonarqube:
+    name: Qualité & sécurité — SonarQube Cloud
+    runs-on: ubuntu-latest
+    needs: tests
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v6
+        with:
+          name: rapport-tests
+          path: reports/tests
+      - name: Analyse SonarQube (ignorée si le secret SONAR_TOKEN est absent)
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v6
+      - name: Avertissement si SonarQube n'est pas configuré
+        if: env.SONAR_TOKEN == ''
+        run: echo "::warning::Secret SONAR_TOKEN absent — analyse SonarQube ignorée (voir docs/ci-cd.md)."
+
+  dast-zap:
+    name: DAST — OWASP ZAP (baseline)
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Démarrer l'application en arrière-plan
+        run: |
+          mkdir -p "$RUNNER_TEMP/data"
+          APP_DATA_DIR="$RUNNER_TEMP/data" nohup streamlit run app.py --server.port 8501 > streamlit.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8501/_stcore/health && break
+            sleep 2
+          done
+      - name: Scan ZAP baseline
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: "http://localhost:8501"
+          cmd_options: "-a"
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: rapport-zap
