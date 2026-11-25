@@ -1,0 +1,14 @@
+Name                     Stmts   Miss  Cover
+--------------------------------------------
+src/__init__.py              0      0   100%
+src/alerts.py               24      0   100%
+src/api_client.py          145     14    90%
+src/auth.py                128      3    98%
+src/config.py               35      2    94%
+src/dashboard.py           174     15    91%
+src/data_processing.py      71      4    94%
+src/manage_users.py         33      1    97%
+--------------------------------------------
+TOTAL                      610     39    94%
+Coverage XML written to file reports/tests/coverage.xml
+44 passed, 2 warnings in 6.13s
